@@ -95,3 +95,7 @@ footer {
 .project-card p {
   flex-grow: 1;
 }
+
+#landing, #projects, #tools, #contact {
+  scroll-margin-top: 70px;
+}
