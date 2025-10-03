@@ -171,23 +171,14 @@ const resetForm = () => {
   resetRecaptcha();
 };
 
-// Initialize reCAPTCHA
-onMounted(async () => {
-  try {
-    await loadRecaptchaScript();
-
-    const interval = setInterval(() => {
-      if (recaptchaContainer.value && window.grecaptcha && window.grecaptcha.render) {
-        renderRecaptcha();
-        clearInterval(interval);
-      }
-    }, 100);
-
-    onBeforeUnmount(() => {
-      clearInterval(interval);
-    });
-  } catch (err) {
-    console.error("Failed to load reCAPTCHA script", err);
-  }
+// Render reCAPTCHA on mount 
+onMounted(() => { 
+  const interval = setInterval(() => { 
+    if (window.grecaptcha && window.grecaptcha.render) { renderRecaptcha(); clearInterval(interval); 
+  } 
+}, 100); 
+  onBeforeUnmount(() => { 
+    clearInterval(interval); 
+  }); 
 });
 </script>
