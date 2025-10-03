@@ -73,6 +73,21 @@ const recaptchaToken = ref("");
 // Your reCAPTCHA site key
 const SITE_KEY = "6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M";
 
+function loadRecaptchaScript(callback) {
+  if (document.getElementById("recaptcha-script")) {
+    callback();
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.id = "recaptcha-script";
+  script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+  script.async = true;
+  script.defer = true;
+  script.onload = callback;
+  document.head.appendChild(script);
+}
+
 // reCAPTCHA callbacks
 function onRecaptchaSuccess(token) {
   recaptchaToken.value = token;
