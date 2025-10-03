@@ -77,7 +77,7 @@ export default {
             Accept: "application/json",
           },
           body: JSON.stringify({
-            access_key: "YOUR_ACCESS_KEY_HERE",
+            access_key: "96caf4ea-9932-4f87-ba02-62281ddfb7ea",
             ...this.form,
           }),
         });
