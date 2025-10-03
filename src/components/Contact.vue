@@ -60,7 +60,6 @@ const notyf = new Notyf();
 const WEB3FORMS_ACCESS_KEY = "96caf4ea-9932-4f87-ba02-62281ddfb7ea";
 const subject = "New message from Portfolio Contact Form";
 
-// Form data
 const name = ref("");
 const email = ref("");
 const message = ref("");
@@ -79,6 +78,7 @@ function loadRecaptchaScript() {
       resolve();
       return;
     }
+
     const script = document.createElement("script");
     script.id = "recaptcha-script";
     script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
@@ -120,14 +120,6 @@ function resetRecaptcha() {
   }
 }
 
-// Reset form
-const resetForm = () => {
-  name.value = "";
-  email.value = "";
-  message.value = "";
-  resetRecaptcha();
-};
-
 // Submit form
 const submitForm = async () => {
   if (!recaptchaToken.value) {
@@ -138,19 +130,20 @@ const submitForm = async () => {
   isLoading.value = true;
 
   try {
-    const payload = {
-      access_key: WEB3FORMS_ACCESS_KEY,
-      subject,
-      name: name.value,
-      email: email.value,
-      message: message.value,
-      "g-recaptcha-response": recaptchaToken.value,
-    };
-
     const response = await fetch("https://api.web3forms.com/submit", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(payload),
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        access_key: WEB3FORMS_ACCESS_KEY,
+        subject,
+        name: name.value,
+        email: email.value,
+        message: message.value,
+        "g-recaptcha-response": recaptchaToken.value,
+      }),
     });
 
     const result = await response.json();
@@ -159,23 +152,30 @@ const submitForm = async () => {
       notyf.success("Message Sent!");
       resetForm();
     } else {
-      console.error("Web3Forms error:", result);
-      notyf.error(result.message || "Failed to send message");
+      notyf.error("Failed to send message");
     }
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     notyf.error("Failed to send message");
   } finally {
     isLoading.value = false;
+    resetRecaptcha();
   }
 };
 
-// Initialize reCAPTCHA on mount
+// Reset form
+const resetForm = () => {
+  name.value = "";
+  email.value = "";
+  message.value = "";
+  resetRecaptcha();
+};
+
+// Initialize reCAPTCHA
 onMounted(async () => {
   try {
     await loadRecaptchaScript();
 
-    // Render reCAPTCHA once the script is ready
     const interval = setInterval(() => {
       if (recaptchaContainer.value && window.grecaptcha && window.grecaptcha.render) {
         renderRecaptcha();
