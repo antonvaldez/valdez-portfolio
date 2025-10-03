@@ -1,27 +1,55 @@
-<template>
-<div class="container" id="contact">
-    <h2>Contact me!</h2>
-    <div class="row my-5 justify-content-center">
-      <div class="col-md-6">
-        <form action="https://google.com">
-          <input type="text" name="name" placeholder="First Name, Last Name" class="form-control" required autocomplete>
-          <input type="text" name="email"  placeholder="Email" class="form-control mt-1" required autocomplete>
-          <textarea rows="5" class="form-control mt-1" placeholder="Enter your message here..."></textarea>
-          <div class="d-flex justify-content-center gap-2 mt-3">
-            <a href="https://www.linkedin.com/" target="_blank">
-              <img src="https://cdn-icons-png.flaticon.com/256/174/174857.png">
-            </a>
-            <a href="https://github.com" target="_blank">
-              <img src="https://cdn-icons-png.flaticon.com/256/25/25231.png">
-            </a>
-            <a href="https://about.gitlab.com" target="_blank">
-              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTMU0Ge8750e3MFRuLtBi_nu8MlsLnuCT5UQ&s">
-            </a>
-            <button type="submit" class="form-button ms-auto">Submit</button>
-            <button type="reset" class="form-button">Reset</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
+<script setup>
+  import { ref } from "vue";
+  import { Notyf } from "notyf";
+  import "notyf/notyf.min.css";
+
+  const notyf = new Notyf();
+
+// Web3Forms key (from your Web3Forms account)
+  const WEB3FORMS_ACCESS_KEY = "96caf4ea-9932-4f87-ba02-62281ddfb7ea";
+  const subject = "New message from Portfolio Contact Form";
+
+  const name = ref("");
+  const email = ref("");
+  const message = ref("");
+
+  const isLoading = ref(false);
+
+  const submitForm = async () => {
+    isLoading.value = true;
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          subject: subject,
+          name: name.value,
+          email: email.value,
+          message: message.value,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log(result);
+        notyf.success("Message Sent!");
+      // clear inputs
+        name.value = "";
+        email.value = "";
+        message.value = "";
+      } else {
+        notyf.error("Something went wrong.");
+      }
+    } catch (error) {
+      console.error(error);
+      notyf.error("Failed to send message");
+    } finally {
+      isLoading.value = false;
+    }
+  };
+</script>
