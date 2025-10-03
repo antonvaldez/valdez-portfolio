@@ -5,29 +5,25 @@
       <div class="col-md-6">
         <form @submit.prevent="submitForm">
           <input
-            type="text"
-            name="name"
-            v-model="form.name"
-            placeholder="First Name, Last Name"
-            class="form-control"
-            required
-            autocomplete
+          type="text"
+          v-model="name"
+          placeholder="First Name, Last Name"
+          class="form-control"
+          required
           />
           <input
-            type="email"
-            name="email"
-            v-model="form.email"
-            placeholder="Email"
-            class="form-control mt-1"
-            required
-            autocomplete
+          type="email"
+          v-model="email"
+          placeholder="Email"
+          class="form-control mt-1"
+          required
           />
           <textarea
-            rows="5"
-            class="form-control mt-1"
-            placeholder="Enter your message here..."
-            v-model="form.message"
-            required
+          rows="5"
+          v-model="message"
+          class="form-control mt-1"
+          placeholder="Enter your message here..."
+          required
           ></textarea>
 
           <div class="d-flex justify-content-center gap-2 mt-3">
@@ -39,11 +35,13 @@
             </a>
             <a href="https://about.gitlab.com" target="_blank">
               <img
-                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTMU0Ge8750e3MFRuLtBi_nu8MlsLnuCT5UQ&s"
+              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTMU0Ge8750e3MFRuLtBi_nu8MlsLnuCT5UQ&s"
               />
             </a>
-            <button type="submit" class="form-button ms-auto">Submit</button>
-            <button type="reset" class="form-button">Reset</button>
+            <button type="submit" class="form-button ms-auto" :disabled="isLoading">
+              {{ isLoading ? "Sending..." : "Submit" }}
+            </button>
+            <button type="reset" class="form-button" @click="resetForm">Reset</button>
           </div>
         </form>
       </div>
@@ -51,51 +49,114 @@
   </div>
 </template>
 
-<script>
-import { Notyf } from "notyf";
-import "notyf/notyf.min.css";
+<script setup>
 
-export default {
-  name: "Contact",
-  data() {
-    return {
-      form: {
-        name: "",
-        email: "",
-        message: "",
-      },
-      notyf: new Notyf(),
-    };
-  },
-  methods: {
-    async submitForm() {
-      try {
-        const response = await fetch("https://api.web3forms.com/submit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            access_key: "96caf4ea-9932-4f87-ba02-62281ddfb7ea",
-            ...this.form,
-          }),
-        });
+    import { ref, onMounted, onBeforeUnmount } from "vue";
 
-        const result = await response.json();
+    import { Notyf } from "notyf";
+    import 'notyf/notyf.min.css';
 
-        if (result.success) {
-          this.notyf.success("Message sent successfully!");
-          this.form.name = "";
-          this.form.email = "";
-          this.form.message = "";
-        } else {
-          this.notyf.error("Something went wrong. Please try again.");
+    const notyf = new Notyf();
+
+    // Add the web3form access key here
+    const WEB3FORMS_ACCESS_KEY = "96caf4ea-9932-4f87-ba02-62281ddfb7ea";
+
+    const subject = "New message from Portfolio Contact Form";
+
+    const name = ref("")
+    const email = ref("")
+    const message = ref("")
+
+    const isLoading = ref(false);
+
+    const submitForm = async () => {
+
+        if(!recaptchaToken.value) {
+            notyf.error('Please verify that you are not a robot.')
+            return;
         }
-      } catch (error) {
-        this.notyf.error("Error sending message. Please try again.");
-      }
-    },
-  },
-};
+
+        isLoading.value = true;
+        try {
+            const response = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    access_key: WEB3FORMS_ACCESS_KEY,
+                    subject: subject,
+                    name: name.value,
+                    email: email.value,
+                    message: message.value
+                }),
+            });
+            const result = await response.json();
+
+            if (result.success){
+                console.log(result);
+                isLoading.value = false;
+                notyf.success("Message Sent!")
+            }
+        } catch (error) {
+            console.log(error)
+            isLoading.value = false;
+            notyf.error("Failed to send message");
+        } finally {
+            //Reset captcha after submit or error
+            resetRecaptcha()
+        }
+    }
+
+
+    const SITE_KEY = '6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M'
+
+    const recaptchaContainer = ref(null);
+    const recaptchaWidgetId = ref(null);
+    const recaptchaToken = ref('')
+
+    function onRecaptchaSuccess(token) {
+        recaptchaToken.value = token;
+    }
+
+    function onRecaptchaExpired() {
+        recaptchaToken.value = '';
+    }
+
+    function renderRecaptcha() {
+        if(!window.grecaptcha) {
+            console.error('reCAPTCHA not loaded');
+            return
+        }
+
+        recaptchaWidgetId.value = window.grecaptcha.render(recaptchaContainer.value, {
+            sitekey: SITE_KEY,
+            size: 'normal', //compact
+            callback: onRecaptchaSuccess,
+            'expired-callback': onRecaptchaExpired,
+        });
+    }
+
+    //Function to reset reCaptcha
+
+    function resetRecaptcha() {
+        if (recaptchaWidgetId.value !== null) {
+            window.grecaptcha.reset(recaptchaWidgetId.value)
+            recaptchaToken.value = '';
+        }
+    }
+
+    onMounted(() => {
+        const interval = setInterval(() => {
+            if(window.grecaptcha && window.grecaptcha.render) {
+                renderRecaptcha();
+                clearInterval(interval)
+            }
+        }, 100)
+
+        onBeforeUnmount(() => {
+            clearInterval(interval);
+        })
+    })
 </script>
