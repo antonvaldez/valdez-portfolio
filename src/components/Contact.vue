@@ -65,7 +65,62 @@
   const message = ref("");
   const isLoading = ref(false);
 
-// Submit form function
+// reCAPTCHA
+  const SITE_KEY = "6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M";
+  const recaptchaContainer = ref(null);
+  const recaptchaWidgetId = ref(null);
+  const recaptchaToken = ref("");
+
+// Load reCAPTCHA script dynamically
+  function loadRecaptchaScript() {
+    return new Promise((resolve, reject) => {
+      if (document.getElementById("recaptcha-script")) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = "recaptcha-script";
+      script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+// reCAPTCHA callbacks
+  function onRecaptchaSuccess(token) {
+    recaptchaToken.value = token;
+  }
+  function onRecaptchaExpired() {
+    recaptchaToken.value = "";
+  }
+
+// Render reCAPTCHA
+  function renderRecaptcha() {
+    if (!window.grecaptcha || !recaptchaContainer.value) {
+      console.error("reCAPTCHA not loaded or container missing");
+      return;
+    }
+    recaptchaWidgetId.value = window.grecaptcha.render(recaptchaContainer.value, {
+      sitekey: SITE_KEY,
+      size: "normal",
+      callback: onRecaptchaSuccess,
+      "expired-callback": onRecaptchaExpired,
+    });
+  }
+
+// Reset reCAPTCHA
+  function resetRecaptcha() {
+    if (recaptchaWidgetId.value !== null && window.grecaptcha) {
+      window.grecaptcha.reset(recaptchaWidgetId.value);
+      recaptchaToken.value = "";
+    }
+  }
+
+// Submit form
   const submitForm = async () => {
     if (!recaptchaToken.value) {
       notyf.error("Please verify that you are not a robot.");
@@ -73,6 +128,7 @@
     }
 
     isLoading.value = true;
+
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -86,6 +142,7 @@
           name: name.value,
           email: email.value,
           message: message.value,
+          "g-recaptcha-response": recaptchaToken.value,
         }),
       });
 
@@ -94,55 +151,19 @@
       if (result.success) {
         notyf.success("Message Sent!");
         resetForm();
+      } else {
+        notyf.error("Failed to send message");
       }
     } catch (error) {
       console.error(error);
-      isLoading.value = false;
       notyf.error("Failed to send message");
     } finally {
+      isLoading.value = false;
       resetRecaptcha();
     }
   };
 
-// Your reCAPTCHA site key
-  const SITE_KEY = "6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M";
-
-// reCAPTCHA refs
-  const recaptchaContainer = ref(null);
-  const recaptchaWidgetId = ref(null);
-  const recaptchaToken = ref("");
-
-// reCAPTCHA callbacks
-  function onRecaptchaSuccess(token) {
-    recaptchaToken.value = token;
-  }
-  function onRecaptchaExpired() {
-    recaptchaToken.value = "";
-  }
-
-// Render reCAPTCHA
-  function renderRecaptcha() {
-    if (!window.grecaptcha) {
-      console.error("reCAPTCHA not loaded");
-      return;
-    }
-    recaptchaWidgetId.value = window.grecaptcha.render(recaptchaContainer.value, {
-      sitekey: SITE_KEY,
-      size: "normal",
-      callback: onRecaptchaSuccess,
-      "expired-callback": onRecaptchaExpired,
-    });
-  }
-
-// Reset reCAPTCHA
-  function resetRecaptcha() {
-    if (recaptchaWidgetId.value !== null) {
-      window.grecaptcha.reset(recaptchaWidgetId.value);
-      recaptchaToken.value = "";
-    }
-  }
-
-// Reset form function
+// Reset form
   const resetForm = () => {
     name.value = "";
     email.value = "";
@@ -150,19 +171,23 @@
     resetRecaptcha();
   };
 
+// Initialize reCAPTCHA
+  onMounted(async () => {
+    try {
+      await loadRecaptchaScript();
 
+      const interval = setInterval(() => {
+        if (recaptchaContainer.value && window.grecaptcha && window.grecaptcha.render) {
+          renderRecaptcha();
+          clearInterval(interval);
+        }
+      }, 100);
 
-// Render reCAPTCHA on mount
-  onMounted(() => {
-    const interval = setInterval(() => {
-      if (window.grecaptcha && window.grecaptcha.render) {
-        renderRecaptcha();
+      onBeforeUnmount(() => {
         clearInterval(interval);
-      }
-    }, 100);
-
-    onBeforeUnmount(() => {
-      clearInterval(interval);
-    });
+      });
+    } catch (err) {
+      console.error("Failed to load reCAPTCHA script", err);
+    }
   });
 </script>
