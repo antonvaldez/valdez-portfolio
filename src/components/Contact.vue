@@ -50,135 +50,110 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
-import { Notyf } from "notyf";
-import "notyf/notyf.min.css";
+    import { ref, onMounted, onBeforeUnmount } from 'vue';
+    import { Notyf } from 'notyf';
+    import 'notyf/notyf.min.css'
 
-const notyf = new Notyf();
+    const notyf  = new Notyf();
 
-// Web3Forms config
-const WEB3FORMS_ACCESS_KEY = "96caf4ea-9932-4f87-ba02-62281ddfb7ea";
-const subject = "New message from Portfolio Contact Form";
+    const WEB3FORMS_ACCESS_KEY = "96caf4ea-9932-4f87-ba02-62281ddfb7ea";
 
-const name = ref("");
-const email = ref("");
-const message = ref("");
-const isLoading = ref(false);
+    const subject = "New message from Portfolio Contact Form";
 
-// reCAPTCHA
-const SITE_KEY = "6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M";
-const recaptchaContainer = ref(null);
-const recaptchaWidgetId = ref(null);
-const recaptchaToken = ref("");
+    const name = ref("")
+    const email = ref("")
+    const message = ref("")
 
-// Load reCAPTCHA script dynamically
-function loadRecaptchaScript() {
-  return new Promise((resolve, reject) => {
-    if (document.getElementById("recaptcha-script")) {
-      resolve();
-      return;
+    const isLoading = ref(false);
+
+    const submitForm = async () => {
+
+        if(!recaptchaToken.value) {
+            notyf.error('Please verify that you are not a robot.')
+            return;
+        }
+
+
+        isLoading.value = true;
+        try {
+            const response = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    access_key: WEB3FORMS_ACCESS_KEY,
+                    subject: subject,
+                    name: name.value,
+                    email: email.value,
+                    message: message.value
+                }),
+            });
+            const result = await response.json();
+
+            if (result.success){
+                console.log(result);
+                isLoading.value = false;
+                notyf.success("Message Sent!")
+            }
+        } catch (error) {
+            console.log(error)
+            isLoading.value = false;
+            notyf.error("Failed to send message");
+        } finally {
+            resetRecaptcha()
+        }
     }
 
-    const script = document.createElement("script");
-    script.id = "recaptcha-script";
-    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
 
-// reCAPTCHA callbacks
-function onRecaptchaSuccess(token) {
-  recaptchaToken.value = token;
-}
-function onRecaptchaExpired() {
-  recaptchaToken.value = "";
-}
+    const SITE_KEY="6LeH7NwrAAAAAJNrL9W7DGMjCSM531FtvmE6jY9M"
+    
+    const recaptchaContainer = ref(null);
+    const recaptchaWidgetId = ref(null);
+    const recaptchaToken = ref('');
 
-// Render reCAPTCHA
-function renderRecaptcha() {
-  if (!window.grecaptcha || !recaptchaContainer.value) {
-    console.error("reCAPTCHA not loaded or container missing");
-    return;
-  }
-  recaptchaWidgetId.value = window.grecaptcha.render(recaptchaContainer.value, {
-    sitekey: SITE_KEY,
-    size: "normal",
-    callback: onRecaptchaSuccess,
-    "expired-callback": onRecaptchaExpired,
-  });
-}
-
-// Reset reCAPTCHA
-function resetRecaptcha() {
-  if (recaptchaWidgetId.value !== null && window.grecaptcha) {
-    window.grecaptcha.reset(recaptchaWidgetId.value);
-    recaptchaToken.value = "";
-  }
-}
-
-// Submit form
-const submitForm = async () => {
-  if (!recaptchaToken.value) {
-    notyf.error("Please verify that you are not a robot.");
-    return;
-  }
-
-  isLoading.value = true;
-
-  try {
-    const response = await fetch("https://api.web3forms.com/submit", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        access_key: WEB3FORMS_ACCESS_KEY,
-        subject,
-        name: name.value,
-        email: email.value,
-        message: message.value,
-        "g-recaptcha-response": recaptchaToken.value,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      notyf.success("Message Sent!");
-      resetForm();
-    } else {
-      notyf.error("Failed to send message");
+    function onRecaptchaSuccess(token) {
+        recaptchaToken.value = token;
     }
-  } catch (error) {
-    console.error(error);
-    notyf.error("Failed to send message");
-  } finally {
-    isLoading.value = false;
-    resetRecaptcha();
-  }
-};
 
-// Reset form
-const resetForm = () => {
-  name.value = "";
-  email.value = "";
-  message.value = "";
-  resetRecaptcha();
-};
+    function onRecaptchaExpired() {
+        recaptchaToken.value = "";
+    }
 
-// Render reCAPTCHA on mount 
-onMounted(() => { 
-  const interval = setInterval(() => { 
-    if (window.grecaptcha && window.grecaptcha.render) { renderRecaptcha(); clearInterval(interval); 
-  } 
-}, 100); 
-  onBeforeUnmount(() => { 
-    clearInterval(interval); 
-  }); 
-});
+    function renderRecaptcha() {
+        if(!window.grecaptcha) {
+            console.error('reCAPTCHA not loaded');
+            return
+        }
+
+        recaptchaWidgetId.value = window.grecaptcha.render(
+            recaptchaContainer.value, {
+                sitekey: SITE_KEY,
+                size: 'normal',
+                callback: onRecaptchaSuccess,
+                'expired-callback': onRecaptchaExpired
+            })
+    }
+
+    function resetRecaptcha() {
+        if (recaptchaWidgetId.value != null) {
+            window.grecaptcha.reset(recaptchaWidgetId.value)
+            recaptchaToken.value = '';
+        }
+    }
+
+
+    onMounted(() => {
+        const interval = setInterval(() => {
+            if(window.grecaptcha && window.grecaptcha.render) {
+                renderRecaptcha();
+                clearInterval(interval)
+            }
+        }, 100)
+
+        onBeforeUnmount(() => {
+            clearInterval(interval);
+        })
+    })
 </script>
