@@ -5,7 +5,7 @@
         <img src="/images/anton.jpg" class="landing-img" alt="Anton">
       </div>
       <div class="col-lg-7 col-md-8 col-12">
-        <h1>Manuel Antonio C. Valdez III HELLO</h1>
+        <h1>Manuel Antonio C. Valdez III</h1>
         <h3>Full Stack Web Developer</h3>
         <p>I’ve always enjoyed solving problems and building things, which eventually led me to discover web development. I started learning on my own, and the more I explored coding, the more I realized I wanted to do this full time. Coming from a different field, I decided to fully shift gears and join a bootcamp to focus on full stack development. Now, I'm all in on becoming a developer and excited to keep learning and building.</p>
       </div>
